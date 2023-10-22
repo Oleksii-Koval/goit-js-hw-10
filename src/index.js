@@ -22,7 +22,6 @@ function handlerSelect(event) {
             const breedName = data[0].breeds[0].name;
 
             createMarkup(breedImg, breedDescription,breedTemperament, breedName)
-
         })
       
 }
