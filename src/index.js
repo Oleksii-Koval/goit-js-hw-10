@@ -1,10 +1,7 @@
-import axios from "axios";
 import SlimSelect from 'slim-select';
 import 'slim-select/dist/slimselect.css';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import { fetchBreeds, fetchCatByBreed } from "./cat-api"
-axios.defaults.headers.common["x-api-key"] = "live_H7qEnr3v7Jq3avnG9nCckyGMlnZtD8qhaCz4349VqZwpsj6iKnPMykWiWwzU44LN";
-
+import { fetchBreeds, fetchCatByBreed } from "./cat-api";
 
 const refs = {
     selectEl: document.querySelector('.breed-select'),
@@ -15,28 +12,31 @@ const refs = {
 
 refs.selectEl.classList.add('is-hidden');
 refs.errorEl.classList.add('is-hidden');
-refs.infoContainerEl.classList.add('is-hidden');
+refs.infoContainerEl.classList.replace('cat-info','is-hidden');
 
 refs.selectEl.addEventListener('change', handlerSelect);
 
-let arrBreedsId = [];
+select()
+function select() {
+    fetchBreeds()
+        .then(data => {
+            refs.loaderEl.classList.replace('is-hidden', 'loader');
 
-fetchBreeds()
-    .then(data => {
-        refs.loaderEl.classList.replace('is-hidden', 'loader');
+            let selectOption = data.map(({ name, id }) => {
+                return `<option value='${id}'> ${name} </option>`
+            });
+            refs.selectEl.insertAdjacentHTML('beforeend', selectOption);
+            new SlimSelect({
+                select: refs.selectEl,
+            })
+        })
+        .catch(onError)
+        .finally(() => {
+            refs.loaderEl.classList.replace('loader', 'is-hidden');
+            refs.selectEl.classList.replace('is-hidden', 'breed-select');
+        });
+};
 
-        data.forEach(breed => {
-            arrBreedsId.push({ text: breed.name, value: breed.id });
-        })
-        new SlimSelect({
-            select: refs.selectEl,
-            data: arrBreedsId,
-        })
-        refs.loaderEl.classList.replace('loader', 'is-hidden');
-        refs.selectEl.classList.replace('is-hidden', 'breed-select')
-    })
-    .catch(onError);
-  
 function handlerSelect(event) {
     const breedId = event.currentTarget.value;
     refs.loaderEl.classList.replace('is-hidden', 'loader');
@@ -45,8 +45,17 @@ function handlerSelect(event) {
     fetchCatByBreed(breedId)
         .then(data => {
             refs.infoContainerEl.classList.add('is-hidden');
-    
-            const breedImg = data[0].url;
+            createMarkup(data)
+        })
+        .catch(onError)
+        .finally(() => {
+            refs.infoContainerEl.classList.remove('is-hidden');
+            refs.loaderEl.classList.replace('loader', 'is-hidden');
+        });
+};
+
+function createMarkup(data) {
+    const breedImg = data[0].url;
             const breedDescription = data[0].breeds[0].description;
             const breedTemperament = data[0].breeds[0].temperament;
             const breedName = data[0].breeds[0].name;
@@ -59,20 +68,17 @@ function handlerSelect(event) {
               <h3><span class="">Temperament: </span>${breedTemperament}</h3>
              </div >
             `;
-            refs.infoContainerEl.classList.remove('is-hidden');
-            refs.loaderEl.classList.replace('loader', 'is-hidden')
-        })
-        .catch(onError);
 };
 
-function onError(error) {
-    refs.errorEl.classList.replace('is-hidden', 'error');
+function onError() {
     refs.loaderEl.classList.replace('loader', 'is-hidden');
+    refs.selectEl.classList.replace('breed-select', 'is-hidden');
 
-    Notify.failure('Oops! Something went wrong! Try reloading the page or select another cat breed!', {
+    Notify.failure('Oops! Something went wrong! Try reloading the page or select another cat breed!',
+    {
         position: 'center-center',
         timeout: 10000,
         width: '400px',
         fontSize: '24px',
-    });
+    })
 };
